@@ -3,7 +3,7 @@
 // Listen for keyboard shortcut
 chrome.commands.onCommand.addListener(async (command) => {
   console.log("Command received:", command);
-  
+
   if (command === "start-recording") {
     try {
       const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -20,18 +20,18 @@ chrome.commands.onCommand.addListener(async (command) => {
         await chrome.tabs.sendMessage(activeTab.id, { action: "toggleRecording" });
       } catch (error) {
         console.log("Content script not detected, attempting to inject...", error.message);
-        
+
         try {
           await chrome.scripting.executeScript({
             target: { tabId: activeTab.id },
             files: ["content.js"]
           });
-          
+
           await chrome.scripting.insertCSS({
             target: { tabId: activeTab.id },
             files: ["content.css"]
           });
-          
+
           setTimeout(async () => {
             try {
               await chrome.tabs.sendMessage(activeTab.id, { action: "toggleRecording" });
@@ -64,19 +64,37 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 async function handleTranscription(audioBlob, sendResponse) {
   try {
     const transcription = await transcribeAudio(audioBlob);
+    
+    if (!transcription || transcription.trim() === '') {
+      sendResponse({ success: false, error: "No speech detected. Please try again." });
+      return;
+    }
+
     const refinedText = await refineText(transcription);
     
     // Save to history
     await saveToHistory(transcription, refinedText);
-    
+
     sendResponse({ success: true, text: refinedText, original: transcription });
   } catch (error) {
+    // Don't retry if the error is just "No speech detected"
+    if (error.message === "No speech detected. Please try again.") {
+      sendResponse({ success: false, error: error.message });
+      return;
+    }
+
     console.error("Error processing audio (attempt 1):", error);
-    
+
     // Auto-retry once on failure
     try {
       console.log("Retrying...");
       const transcription = await transcribeAudio(audioBlob);
+      
+      if (!transcription || transcription.trim() === '') {
+        sendResponse({ success: false, error: "No speech detected. Please try again." });
+        return;
+      }
+      
       const refinedText = await refineText(transcription);
       await saveToHistory(transcription, refinedText);
       sendResponse({ success: true, text: refinedText, original: transcription });
@@ -92,19 +110,19 @@ async function saveToHistory(original, refined) {
   try {
     const result = await chrome.storage.local.get(['voxflowHistory']);
     const history = result.voxflowHistory || [];
-    
+
     history.unshift({
       id: Date.now(),
       original: original,
       refined: refined,
       timestamp: new Date().toISOString()
     });
-    
+
     // Keep only last 20 entries
     if (history.length > 20) {
       history.length = 20;
     }
-    
+
     await chrome.storage.local.set({ voxflowHistory: history });
   } catch (e) {
     console.error("Failed to save history:", e);
@@ -114,14 +132,14 @@ async function saveToHistory(original, refined) {
 // Transcribe audio using Groq Whisper API
 async function transcribeAudio(audioBlob) {
   const apiKey = await getApiKey();
-  
+
   if (!apiKey) {
     throw new Error("Groq API key not set. Please add it in the extension popup.");
   }
 
   const response = await fetch(audioBlob);
   const blob = await response.blob();
-  
+
   const formData = new FormData();
   formData.append('file', blob, 'audio.webm');
   formData.append('model', 'whisper-large-v3');
@@ -214,7 +232,7 @@ async function refineText(text) {
   }
 
   const apiKey = await getApiKey();
-  
+
   // Get selected template
   const settings = await chrome.storage.sync.get(['selectedTemplate']);
   const templateKey = settings.selectedTemplate || 'ai-prompt';
