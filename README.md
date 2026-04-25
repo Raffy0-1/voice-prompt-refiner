@@ -1,78 +1,57 @@
 # 🎙️ VoxFlow
 
-**A premium AI-powered Chrome extension that seamlessly converts your speech into refined, professional AI prompts. Experience the future of voice-to-text with elite multilingual support and high-performance refinement.**
+**The ultimate AI voice-to-prompt engine. Experience near-instant transcription and professional-grade refinement directly in your browser.**
 
-![VoxFlow Preview](icons/icon128.png)
+![VoxFlow Logo](icons/icon128.png)
 
-## ✨ Premium Features
+VoxFlow isn't just a voice-to-text tool; it's a **refinement engine**. It takes your spoken thoughts—rambling, filler words, and all—and converts them into structured, high-quality text using state-of-the-art AI.
 
-- 🎯 **Vox to Prompt**: High-fidelity transcription using Groq's Whisper Large-v3.
-- 🔄 **Digital Aperture Refinement**: Our "Digital Aperture" system polishes your speech, removing filler words, fixing grammar, and converting rambling into clear, concise instructions.
-- 🌍 **Elite Multilingual**: Seamlessly handles code-switching between English, Urdu, Hindi, and 90+ other languages.
-- ⚡ **Turbo Performance**: Powered by Groq Cloud for near-instant transcription and refinement using Llama 3.3 70B.
-- 🎨 **Digital Aperture UI**: A stunning, glassmorphic dark-mode overlay that feels like a natural part of your browser.
-- ⌨️ **Stealth Shortcut**: Invoke VoxFlow instantly with `Ctrl+Shift+V` (or `Cmd+Shift+V` on Mac).
-- 💯 **100% Accessible**: Uses the free Groq API tier with massive daily limits.
+## ✨ Elite Features
 
-## 🚀 Installation & Quick Start
+- 🎯 **5 Refinement Modes**: 
+  - **AI Prompt**: Optimized for ChatGPT/Claude.
+  - **Email Draft**: Professional, polished communication.
+  - **Code**: Technical documentation and comments.
+  - **Social Post**: Engaging posts for X/Twitter.
+  - **Quick Notes**: Clean bullet points and summaries.
+- 🔄 **History Log**: Keeps your last 20 transcriptions for easy access and one-click copying.
+- ⚡ **Turbo Performance**: Powered by **Groq Cloud** (Whisper v3 + Llama 3.3 70B) for sub-second responses.
+- 🎨 **Concise Draggable UI**: A premium, compact glassmorphic overlay that stays out of your way. Move it anywhere on the screen!
+- 🌓 **Dual Appearance**: Seamlessly toggle between **Light Mode** and **Dark Mode** to match your workflow.
+- ⌨️ **Stealth Shortcut**: Press `Ctrl+Shift+V` (or `Cmd+Shift+V` on Mac) to record from any website.
+- 🛠️ **Auto-Insert**: One-click insertion into any text field, or enable "Auto-Insert" mode to skip the preview.
 
-### 1. Get Your Groq API Key (Free)
+## 🚀 Installation
 
-1. Visit the [Groq Cloud Console](https://console.groq.com)
-2. Sign up or Log in
-3. Navigate to **API Keys**
-4. Click **Create API Key** and copy it.
+1. **Clone the Repo**:
+   ```bash
+   git clone https://github.com/Raffy0-1/voice-prompt-refiner.git
+   ```
+2. **Open Extensions**: Go to `chrome://extensions/` in your browser.
+3. **Developer Mode**: Enable the toggle in the top-right corner.
+4. **Load Unpacked**: Click **Load unpacked** and select the project folder.
+5. **Setup API Key**:
+   - Get a free key from [Groq Console](https://console.groq.com/keys).
+   - Click the VoxFlow icon in your toolbar, paste the key, and choose your default mode.
 
-### 2. Install VoxFlow
+## 📖 How it Works
 
-1. Download or clone this repository.
-2. Open Chrome and navigate to `chrome://extensions/`.
-3. Enable **Developer mode** (top-right toggle).
-4. Click **Load unpacked** and select the `voxflow` (or `voice-prompt-refiner`) folder.
-5. VoxFlow is now installed! 🚀
-
-### 3. Setup
-
-1. Click the **VoxFlow** icon in your extension toolbar.
-2. Paste your API key into the secure configuration field.
-3. Click **Save Settings**.
-
-## 📖 How to Use
-
-1. **Focus**: Click into any text field (ChatGPT, Claude, Gmail, etc.).
+1. **Focus**: Click into any text field (ChatGPT, Gmail, etc.).
 2. **Invoke**: Press `Ctrl+Shift+V`.
-3. **Speak**: The premium glassmorphic overlay will appear. Speak naturally.
-4. **Refine**: Click **Stop Recording**. Our AI will instantly polish your words.
-5. **Flow**: Click **Insert Text** to drop the refined prompt directly into your active field.
+3. **Speak**: The compact overlay will appear at the bottom-right.
+4. **Flow**: Click **Stop**. VoxFlow will instantly refine your text.
+5. **Insert**: Click **Insert** or **Copy** to use your refined prompt.
 
-## 🔧 Technical Architecture
+## 🔒 Privacy & Security
 
-VoxFlow is built for speed and elegance:
-
-- **Frontend**: Vanilla JavaScript with a custom CSS design system ("Digital Aperture").
-- **STT**: Groq Whisper Large-v3 (90+ languages).
-- **LLM**: Groq Llama 3.3 70B (Text Polishing).
-- **Storage**: Chrome Secure Sync Storage for API keys.
-
-## 🎨 Design Philosophy: "Digital Aperture"
-
-VoxFlow utilizes the **Digital Aperture** design system, focusing on:
-- **Depth**: Using background color shifts instead of borders.
-- **Focus**: High-contrast typography (Inter) on Deep Slate surfaces.
-- **Light**: Glassmorphic blurs and Electric Indigo glows.
-
-## 🔒 Privacy
-
-- **Local Storage**: Your API key never leaves your browser's local sync storage.
-- **Processing**: Audio is processed via Groq's secure API.
-- **No Tracking**: VoxFlow does not collect any user data or track your browsing.
+- **Direct API**: Your audio goes directly to Groq's API. No middle-man servers.
+- **Local Storage**: Your API key and history are stored securely in your browser's local storage.
+- **No Tracking**: We don't track your recordings, text, or habits. Ever.
 
 ## 📄 License
 
-VoxFlow is open-source software licensed under the [MIT License](LICENSE).
+VoxFlow is open-source under the [MIT License](LICENSE).
 
 ---
 
-**Crafted with ❤️ for those who want their prompts to flow effortlessly.**
-
-**Star ⭐ VoxFlow if it saves you time!**
+**Star ⭐ VoxFlow if it helps your prompts flow!**
