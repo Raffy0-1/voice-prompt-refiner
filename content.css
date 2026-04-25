@@ -1,0 +1,262 @@
+/* 
+ * VoxFlow - Content Script Styles
+ * Compact, bottom-positioned, draggable overlay.
+ */
+
+/* --- Overlay (bottom-right by default) --- */
+
+.vpr-overlay {
+  position: fixed !important;
+  bottom: 24px !important;
+  right: 24px !important;
+  top: auto !important;
+  left: auto !important;
+  transform: none !important;
+  z-index: 2147483647 !important;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+  animation: vpr-slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+@keyframes vpr-slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.vpr-overlay-content {
+  background: rgba(11, 19, 38, 0.92) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  border-radius: 16px !important;
+  padding: 16px 20px !important;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.06) !important;
+  width: 340px !important;
+  max-width: 90vw !important;
+  color: white !important;
+  position: relative !important;
+  box-sizing: border-box !important;
+}
+
+.vpr-compact {
+  padding: 14px 18px !important;
+}
+
+/* --- Drag Handle --- */
+
+.vpr-drag-handle {
+  position: absolute !important;
+  top: 6px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  font-size: 10px !important;
+  color: rgba(255, 255, 255, 0.2) !important;
+  cursor: grab !important;
+  user-select: none !important;
+  letter-spacing: 2px !important;
+  line-height: 1 !important;
+  padding: 2px 8px !important;
+}
+
+.vpr-drag-handle:active {
+  cursor: grabbing !important;
+  color: rgba(255, 255, 255, 0.4) !important;
+}
+
+/* --- Compact Row --- */
+
+.vpr-compact-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  margin: 8px 0 12px !important;
+}
+
+/* --- Recording Dot --- */
+
+.vpr-recording-dot {
+  width: 10px !important;
+  height: 10px !important;
+  background: #ef4444 !important;
+  border-radius: 50% !important;
+  flex-shrink: 0 !important;
+  animation: vpr-blink 1s infinite !important;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.5) !important;
+}
+
+@keyframes vpr-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* --- Timer Badge --- */
+
+.vpr-timer-badge {
+  margin-left: auto !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  color: #94a3b8 !important;
+  font-variant-numeric: tabular-nums !important;
+}
+
+/* --- Title --- */
+
+.vpr-overlay-title {
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  color: white !important;
+  line-height: 1 !important;
+}
+
+/* --- Done/Error Icons --- */
+
+.vpr-done-icon {
+  width: 20px !important;
+  height: 20px !important;
+  flex-shrink: 0 !important;
+}
+
+/* --- Word Badge --- */
+
+.vpr-word-badge {
+  margin-left: auto !important;
+  font-size: 12px !important;
+  color: #6366f1 !important;
+  font-weight: 600 !important;
+  background: rgba(99, 102, 241, 0.1) !important;
+  padding: 2px 8px !important;
+  border-radius: 8px !important;
+}
+
+/* --- Transcription Box --- */
+
+.vpr-transcription-box {
+  background: rgba(0, 0, 0, 0.2) !important;
+  border-radius: 10px !important;
+  padding: 12px 14px !important;
+  font-size: 13px !important;
+  line-height: 1.6 !important;
+  margin-bottom: 12px !important;
+  max-height: 140px !important;
+  overflow-y: auto !important;
+  color: #e2e8f0 !important;
+  border: 1px solid rgba(255, 255, 255, 0.04) !important;
+}
+
+/* --- Overlay Actions --- */
+
+.vpr-overlay-actions {
+  display: flex !important;
+  gap: 8px !important;
+}
+
+/* --- Close Icon --- */
+
+.vpr-close-icon {
+  position: absolute !important;
+  top: 10px !important;
+  right: 10px !important;
+  width: 26px !important;
+  height: 26px !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  color: #64748b !important;
+  font-size: 16px !important;
+  border: none !important;
+  line-height: 1 !important;
+}
+
+.vpr-close-icon:hover {
+  background: rgba(239, 68, 68, 0.12) !important;
+  color: #ef4444 !important;
+}
+
+/* --- Buttons --- */
+
+.vpr-overlay .vpr-btn {
+  width: 100% !important;
+  padding: 10px !important;
+  border: none !important;
+  border-radius: 10px !important;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-sizing: border-box !important;
+}
+
+.vpr-overlay .vpr-btn-primary {
+  background: linear-gradient(135deg, #6366f1, #8083ff) !important;
+  color: white !important;
+}
+
+.vpr-overlay .vpr-btn-primary:hover {
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.35) !important;
+}
+
+.vpr-overlay .vpr-btn-secondary {
+  background: rgba(255, 255, 255, 0.07) !important;
+  color: #cbd5e1 !important;
+}
+
+.vpr-overlay .vpr-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+}
+
+/* --- Error --- */
+.vpr-error-title { color: #ef4444 !important; }
+.vpr-error-box { border-color: rgba(239, 68, 68, 0.15) !important; }
+
+/* --- Small Spinner --- */
+
+.vpr-spinner-sm {
+  width: 18px !important;
+  height: 18px !important;
+  border: 2px solid rgba(255, 255, 255, 0.1) !important;
+  border-top-color: #6366f1 !important;
+  border-radius: 50% !important;
+  animation: vpr-spin 0.7s linear infinite !important;
+  box-sizing: border-box !important;
+  flex-shrink: 0 !important;
+}
+
+@keyframes vpr-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* --- Notifications --- */
+
+.vpr-notification {
+  position: fixed !important;
+  bottom: 24px !important;
+  right: 24px !important;
+  background: rgba(11, 19, 38, 0.92) !important;
+  backdrop-filter: blur(12px) !important;
+  color: white !important;
+  padding: 12px 18px !important;
+  border-radius: 10px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3) !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  z-index: 2147483647 !important;
+  transform: translateY(20px) !important;
+  opacity: 0 !important;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+  max-width: 280px !important;
+}
+
+.vpr-notification-show {
+  transform: translateY(0) !important;
+  opacity: 1 !important;
+}
+
+.vpr-notification-success { border-left: 3px solid #10b981 !important; }
+.vpr-notification-error { border-left: 3px solid #ef4444 !important; }

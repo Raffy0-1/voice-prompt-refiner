@@ -1,150 +1,219 @@
-// Content script injected into all webpages
+// Content script injected into all webpages — VoxFlow
 
 let isRecording = false;
 let mediaRecorder = null;
 let audioChunks = [];
 let overlayElement = null;
 let activeInputElement = null;
+let recognition = null;
+let recordingTimer = null;
+let recordingStartTime = null;
 
-// Listen for messages from background script
+// Drag state
+let isDragging = false;
+let dragOffsetX = 0;
+let dragOffsetY = 0;
+
+// Listen for messages
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  console.log("Content script received action:", request.action);
   if (request.action === "toggleRecording") {
     toggleRecording();
   }
 });
 
-// Initialize on page load
+// Initialize
 function init() {
-  // Track the currently focused input element
   document.addEventListener('focusin', (e) => {
-    if (isInputElement(e.target)) {
-      activeInputElement = e.target;
-    }
+    if (isInputElement(e.target)) activeInputElement = e.target;
   });
-  
-  // Listen for clicks on input elements
   document.addEventListener('click', (e) => {
-    if (isInputElement(e.target)) {
-      activeInputElement = e.target;
-    }
+    if (isInputElement(e.target)) activeInputElement = e.target;
   });
 }
 
-// Check if element is a text input
 function isInputElement(element) {
   if (!element) return false;
-  
   const tagName = element.tagName.toLowerCase();
   const type = element.type?.toLowerCase();
-  const contentEditable = element.contentEditable === 'true';
-  
   return (
     (tagName === 'input' && (type === 'text' || type === 'search' || type === 'email' || !type)) ||
     tagName === 'textarea' ||
-    contentEditable ||
+    element.contentEditable === 'true' ||
     element.getAttribute('role') === 'textbox'
   );
 }
 
-// Toggle recording state
-function toggleRecording() {
-  if (isRecording) {
-    stopRecording();
-  } else {
-    startRecording();
-  }
+// ── Recording Timer ──
+function startTimer() {
+  recordingStartTime = Date.now();
+  updateTimerDisplay();
+  recordingTimer = setInterval(updateTimerDisplay, 1000);
 }
 
-// Start recording audio
+function updateTimerDisplay() {
+  const elapsed = Date.now() - recordingStartTime;
+  const seconds = Math.floor(elapsed / 1000);
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  const timerEl = document.getElementById('vpr-timer');
+  if (timerEl) timerEl.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+function stopTimer() {
+  if (recordingTimer) { clearInterval(recordingTimer); recordingTimer = null; }
+}
+
+// ── Live Transcription (opt-in) ──
+function startLiveTranscription() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) return;
+  
+  recognition = new SpeechRecognition();
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.lang = 'en-US';
+  
+  recognition.onresult = (event) => {
+    let interim = '';
+    let final = '';
+    for (let i = 0; i < event.results.length; i++) {
+      const transcript = event.results[i][0].transcript;
+      if (event.results[i].isFinal) final += transcript + ' ';
+      else interim += transcript;
+    }
+    const liveTextEl = document.getElementById('vpr-live-text');
+    if (liveTextEl) {
+      const displayText = (final + interim).trim();
+      liveTextEl.textContent = displayText || 'Listening...';
+    }
+  };
+  
+  recognition.onerror = () => {};
+  try { recognition.start(); } catch (e) {}
+}
+
+function stopLiveTranscription() {
+  if (recognition) { try { recognition.stop(); } catch (e) {} recognition = null; }
+}
+
+// ── Toggle ──
+function toggleRecording() {
+  if (isRecording) stopRecording();
+  else startRecording();
+}
+
+// ── Start Recording ──
 async function startRecording() {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    
-    // Create media recorder
     mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
     audioChunks = [];
     
-    mediaRecorder.addEventListener('dataavailable', (event) => {
-      audioChunks.push(event.data);
-    });
-    
+    mediaRecorder.addEventListener('dataavailable', (event) => audioChunks.push(event.data));
     mediaRecorder.addEventListener('stop', async () => {
       const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
       await processAudio(audioBlob);
-      
-      // Stop all tracks
       stream.getTracks().forEach(track => track.stop());
     });
     
     mediaRecorder.start();
     isRecording = true;
     
-    // Show overlay
-    showOverlay('recording');
-    console.log('Recording started');
+    // Check if live preview is enabled
+    const settings = await new Promise(r => chrome.storage.sync.get(['livePreview'], r));
+    showOverlay('recording', '', settings.livePreview || false);
+    startTimer();
+    if (settings.livePreview) startLiveTranscription();
     
   } catch (error) {
-    console.error('Error starting recording:', error);
-    let errorMessage = 'Microphone access denied or not available.';
-    if (error.name === 'NotAllowedError') {
-      errorMessage = 'Microphone permission was denied. Please allow it in site settings.';
-    } else if (error.name === 'NotFoundError') {
-      errorMessage = 'No microphone found on your device.';
-    } else if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
-      errorMessage = 'Microphone access is only allowed on HTTPS websites or localhost.';
-    }
-    showNotification(errorMessage, 'error');
+    let errorMessage = 'Microphone access denied.';
+    if (error.name === 'NotAllowedError') errorMessage = 'Microphone permission denied. Allow it in site settings.';
+    else if (error.name === 'NotFoundError') errorMessage = 'No microphone found.';
     showOverlay('error', errorMessage);
   }
 }
 
-// Stop recording audio
+// ── Stop Recording ──
 function stopRecording() {
   if (mediaRecorder && isRecording) {
     mediaRecorder.stop();
     isRecording = false;
+    stopTimer();
+    stopLiveTranscription();
     showOverlay('processing');
   }
 }
 
-// Process recorded audio
+// ── Process Audio ──
 async function processAudio(audioBlob) {
   try {
-    // Convert blob to base64
     const reader = new FileReader();
     reader.readAsDataURL(audioBlob);
-    
     reader.onloadend = async () => {
-      const base64Audio = reader.result;
-      
-      // Send to background script for processing
       chrome.runtime.sendMessage(
-        { action: 'transcribeAudio', audioBlob: base64Audio },
-        (response) => {
-          if (response.success) {
-            showOverlay('completed', response.text);
+        { action: 'transcribeAudio', audioBlob: reader.result },
+        async (response) => {
+          if (chrome.runtime.lastError) {
+            showOverlay('error', 'Connection error: ' + chrome.runtime.lastError.message);
+            return;
+          }
+          if (response && response.success) {
+            const settings = await new Promise(r => chrome.storage.sync.get(['autoInsert'], r));
+            if (settings.autoInsert && activeInputElement) {
+              doInsertText(response.text);
+              showNotification('✨ Refined & inserted!', 'success');
+            } else {
+              showOverlay('completed', response.text);
+            }
           } else {
-            showOverlay('error', response.error);
+            showOverlay('error', response ? response.error : 'No response');
           }
         }
       );
     };
-    
   } catch (error) {
-    console.error('Error processing audio:', error);
     showOverlay('error', error.message);
   }
 }
 
-// Show overlay with different states
-function showOverlay(state, text = '') {
-  // Remove existing overlay
-  if (overlayElement) {
-    overlayElement.remove();
-  }
+// ── Word/Char count ──
+function getWordCount(text) { return text.trim().split(/\s+/).filter(w => w.length > 0).length; }
+
+// ── Draggable Logic ──
+function makeDraggable(overlayEl) {
+  const handle = overlayEl.querySelector('.vpr-drag-handle');
+  if (!handle) return;
   
-  // Create overlay
+  handle.addEventListener('mousedown', (e) => {
+    isDragging = true;
+    const rect = overlayEl.getBoundingClientRect();
+    dragOffsetX = e.clientX - rect.left;
+    dragOffsetY = e.clientY - rect.top;
+    overlayEl.style.transition = 'none';
+    e.preventDefault();
+  });
+  
+  document.addEventListener('mousemove', (e) => {
+    if (!isDragging || !overlayElement) return;
+    const x = e.clientX - dragOffsetX;
+    const y = e.clientY - dragOffsetY;
+    overlayElement.style.left = x + 'px';
+    overlayElement.style.top = y + 'px';
+    overlayElement.style.right = 'auto';
+    overlayElement.style.bottom = 'auto';
+    overlayElement.style.transform = 'none';
+  });
+  
+  document.addEventListener('mouseup', () => {
+    isDragging = false;
+    if (overlayElement) overlayElement.style.transition = '';
+  });
+}
+
+// ── Overlay UI ──
+function showOverlay(state, text = '', showPreview = false) {
+  if (overlayElement) overlayElement.remove();
+  
   overlayElement = document.createElement('div');
   overlayElement.className = 'vpr-overlay';
   overlayElement.id = 'vpr-overlay';
@@ -153,69 +222,82 @@ function showOverlay(state, text = '') {
   
   if (state === 'recording') {
     content = `
-      <div class="vpr-overlay-content vpr-recording">
-        <div class="vpr-pulse"></div>
-        <div class="vpr-text">Recording... Speak now</div>
-        <div class="vpr-transcription" id="vpr-live-text">Listening...</div>
-        <button class="vpr-button vpr-stop-btn" id="vpr-stop-btn">Stop Recording</button>
-      </div>
-    `;
+      <div class="vpr-overlay-content vpr-compact">
+        <div class="vpr-drag-handle">⋮⋮</div>
+        <div class="vpr-close-icon" id="vpr-close-overlay">×</div>
+        <div class="vpr-compact-row">
+          <div class="vpr-recording-dot"></div>
+          <span class="vpr-overlay-title">Recording</span>
+          <span class="vpr-timer-badge" id="vpr-timer">0:00</span>
+        </div>
+        ${showPreview ? '<div class="vpr-transcription-box" id="vpr-live-text">Listening...</div>' : ''}
+        <button class="vpr-btn vpr-btn-primary" id="vpr-stop-btn">Stop</button>
+      </div>`;
   } else if (state === 'processing') {
     content = `
-      <div class="vpr-overlay-content vpr-processing">
-        <div class="vpr-spinner"></div>
-        <div class="vpr-text">Processing & Refining...</div>
-      </div>
-    `;
+      <div class="vpr-overlay-content vpr-compact">
+        <div class="vpr-drag-handle">⋮⋮</div>
+        <div class="vpr-compact-row">
+          <div class="vpr-spinner-sm"></div>
+          <span class="vpr-overlay-title">Refining your prompt...</span>
+        </div>
+      </div>`;
   } else if (state === 'completed') {
+    const words = getWordCount(text);
     content = `
-      <div class="vpr-overlay-content vpr-completed">
-        <div class="vpr-header">
-          <div class="vpr-title">✓ Refined Text</div>
-          <button class="vpr-close-btn" id="vpr-close-btn">×</button>
+      <div class="vpr-overlay-content vpr-compact">
+        <div class="vpr-drag-handle">⋮⋮</div>
+        <div class="vpr-close-icon" id="vpr-close-overlay">×</div>
+        <div class="vpr-compact-row">
+          <svg class="vpr-done-icon" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          <span class="vpr-overlay-title">Refined</span>
+          <span class="vpr-word-badge">${words}w</span>
         </div>
-        <div class="vpr-refined-text" id="vpr-refined-text">${escapeHtml(text)}</div>
-        <div class="vpr-actions">
-          <button class="vpr-button vpr-insert-btn" id="vpr-insert-btn">Insert Text</button>
-          <button class="vpr-button vpr-copy-btn" id="vpr-copy-btn">Copy to Clipboard</button>
+        <div class="vpr-transcription-box">${escapeHtml(text)}</div>
+        <div class="vpr-overlay-actions">
+          <button class="vpr-btn vpr-btn-primary" id="vpr-insert-btn">Insert</button>
+          <button class="vpr-btn vpr-btn-secondary" id="vpr-copy-btn">Copy</button>
         </div>
-      </div>
-    `;
+      </div>`;
   } else if (state === 'error') {
     content = `
-      <div class="vpr-overlay-content vpr-error">
-        <div class="vpr-text">❌ Error</div>
-        <div class="vpr-error-message">${escapeHtml(text)}</div>
-        <button class="vpr-button" id="vpr-close-btn">Close</button>
-      </div>
-    `;
+      <div class="vpr-overlay-content vpr-compact">
+        <div class="vpr-drag-handle">⋮⋮</div>
+        <div class="vpr-close-icon" id="vpr-close-overlay">×</div>
+        <div class="vpr-compact-row">
+          <svg class="vpr-done-icon" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+          <span class="vpr-overlay-title vpr-error-title">Error</span>
+        </div>
+        <div class="vpr-transcription-box vpr-error-box">${escapeHtml(text)}</div>
+        <button class="vpr-btn vpr-btn-secondary" id="vpr-close-btn">Close</button>
+      </div>`;
   }
   
   overlayElement.innerHTML = content;
   document.body.appendChild(overlayElement);
+  makeDraggable(overlayElement);
   
-  // Add event listeners
+  // Event listeners
+  document.getElementById('vpr-close-overlay')?.addEventListener('click', closeOverlay);
   if (state === 'recording') {
     document.getElementById('vpr-stop-btn')?.addEventListener('click', stopRecording);
   } else if (state === 'completed') {
     document.getElementById('vpr-insert-btn')?.addEventListener('click', () => insertText(text));
     document.getElementById('vpr-copy-btn')?.addEventListener('click', () => copyText(text));
-    document.getElementById('vpr-close-btn')?.addEventListener('click', closeOverlay);
   } else if (state === 'error') {
     document.getElementById('vpr-close-btn')?.addEventListener('click', closeOverlay);
   }
 }
 
-// Insert text into active input
-function insertText(text) {
+function insertText(text) { doInsertText(text); }
+
+function doInsertText(text) {
   if (!activeInputElement) {
-    showNotification('No text input selected', 'error');
+    showNotification('Click a text field first', 'error');
     return;
   }
   
-  // Handle different input types
   if (activeInputElement.contentEditable === 'true') {
-    // For contenteditable elements — use modern Selection/Range API (execCommand is deprecated)
     activeInputElement.focus();
     const selection = window.getSelection();
     if (selection && selection.rangeCount > 0) {
@@ -228,78 +310,53 @@ function insertText(text) {
       selection.removeAllRanges();
       selection.addRange(range);
     } else {
-      // Fallback: append to end of element
       const range = document.createRange();
       range.selectNodeContents(activeInputElement);
       range.collapse(false);
-      const textNode = document.createTextNode(text);
-      range.insertNode(textNode);
+      range.insertNode(document.createTextNode(text));
     }
-    // Dispatch InputEvent so React/Vue/Angular pick up the change
-    activeInputElement.dispatchEvent(new InputEvent('input', {
-      bubbles: true,
-      cancelable: true,
-      inputType: 'insertText',
-      data: text
-    }));
+    activeInputElement.dispatchEvent(new InputEvent('input', { bubbles: true, cancelable: true, inputType: 'insertText', data: text }));
   } else {
-    // For regular inputs/textareas
     const start = activeInputElement.selectionStart || 0;
     const end = activeInputElement.selectionEnd || 0;
-    const currentValue = activeInputElement.value;
-    
-    activeInputElement.value = currentValue.substring(0, start) + text + currentValue.substring(end);
+    const val = activeInputElement.value;
+    activeInputElement.value = val.substring(0, start) + text + val.substring(end);
     activeInputElement.selectionStart = activeInputElement.selectionEnd = start + text.length;
-    
-    // Trigger input event for frameworks like React
     activeInputElement.dispatchEvent(new Event('input', { bubbles: true }));
   }
   
   closeOverlay();
-  showNotification('Text inserted successfully', 'success');
+  showNotification('Text inserted!', 'success');
 }
 
-// Copy text to clipboard
 function copyText(text) {
   navigator.clipboard.writeText(text).then(() => {
-    showNotification('Copied to clipboard', 'success');
+    showNotification('Copied!', 'success');
     closeOverlay();
-  }).catch(() => {
-    showNotification('Failed to copy', 'error');
-  });
+  }).catch(() => showNotification('Copy failed', 'error'));
 }
 
-// Close overlay
 function closeOverlay() {
-  if (overlayElement) {
-    overlayElement.remove();
-    overlayElement = null;
-  }
+  if (overlayElement) { overlayElement.remove(); overlayElement = null; }
+  if (isRecording) stopRecording();
 }
 
-// Show notification
 function showNotification(message, type = 'info') {
-  const notification = document.createElement('div');
-  notification.className = `vpr-notification vpr-notification-${type}`;
-  notification.textContent = message;
-  document.body.appendChild(notification);
-  
+  const n = document.createElement('div');
+  n.className = `vpr-notification vpr-notification-${type}`;
+  n.textContent = message;
+  document.body.appendChild(n);
+  setTimeout(() => n.classList.add('vpr-notification-show'), 10);
   setTimeout(() => {
-    notification.classList.add('vpr-notification-show');
-  }, 10);
-  
-  setTimeout(() => {
-    notification.classList.remove('vpr-notification-show');
-    setTimeout(() => notification.remove(), 300);
-  }, 3000);
+    n.classList.remove('vpr-notification-show');
+    setTimeout(() => n.remove(), 300);
+  }, 2500);
 }
 
-// Escape HTML to prevent XSS
 function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
 }
 
-// Initialize
 init();

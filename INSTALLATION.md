@@ -20,7 +20,7 @@ Or download as ZIP and extract it.
 3. Verify your email
 4. Once logged in, click **API Keys** in the left sidebar
 5. Click **Create API Key**
-6. Give it a name (e.g., "Voice Prompt Refiner")
+6. Give it a name (e.g., "VoxFlow")
 7. **Copy the API key** - it starts with `gsk_`
 8. ⚠️ Save it somewhere safe - you'll need it in step 4
 
@@ -37,7 +37,7 @@ Or download as ZIP and extract it.
 ### 4. Configure Your API Key
 
 1. Click the **puzzle piece icon** (🧩) in Chrome's toolbar
-2. Find **Voice Prompt Refiner** and click it
+2. Find **VoxFlow** and click it
 3. Paste your Groq API key in the text field
 4. Click **Save Settings**
 5. You'll see a success message ✓
@@ -67,7 +67,7 @@ The extension is now ready to use on any website with text inputs.
 ### Can't find the extension icon
 
 1. Click the **puzzle piece icon** (🧩) in Chrome toolbar
-2. Find **Voice Prompt Refiner**
+2. Find **VoxFlow**
 3. Click the **pin icon** to add it to your toolbar
 
 ### Microphone not working
@@ -97,7 +97,7 @@ When there's a new version:
 
 1. Download the new files
 2. Go to `chrome://extensions/`
-3. Click the **refresh icon** on the Voice Prompt Refiner card
+3. Click the **refresh icon** on the VoxFlow card
 4. The extension will reload with the new code
 
 ---
