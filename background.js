@@ -1,11 +1,37 @@
 // Background service worker for Voice Prompt Refiner
 
 // Listen for keyboard shortcut
+// Listen for keyboard shortcut
 chrome.commands.onCommand.addListener((command) => {
+  console.log("Command received:", command);
   if (command === "start-recording") {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      if (tabs[0]) {
-        chrome.tabs.sendMessage(tabs[0].id, { action: "toggleRecording" });
+    chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
+      const activeTab = tabs[0];
+      if (!activeTab) return;
+
+      try {
+        // Try to send message
+        await chrome.tabs.sendMessage(activeTab.id, { action: "toggleRecording" });
+      } catch (error) {
+        console.log("Content script not detected, attempting to inject...", error);
+        // If message fails, it usually means the content script isn't loaded
+        // (e.g. page was open before extension installation)
+        try {
+          await chrome.scripting.executeScript({
+            target: { tabId: activeTab.id },
+            files: ["content.js"]
+          });
+          await chrome.scripting.insertCSS({
+            target: { tabId: activeTab.id },
+            files: ["styles.css"]
+          });
+          // Try sending again after injection
+          setTimeout(() => {
+            chrome.tabs.sendMessage(activeTab.id, { action: "toggleRecording" });
+          }, 100);
+        } catch (injectionError) {
+          console.error("Failed to inject content script:", injectionError);
+        }
       }
     });
   }

@@ -8,6 +8,7 @@ let activeInputElement = null;
 
 // Listen for messages from background script
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  console.log("Content script received action:", request.action);
   if (request.action === "toggleRecording") {
     toggleRecording();
   }
@@ -81,10 +82,20 @@ async function startRecording() {
     
     // Show overlay
     showOverlay('recording');
+    console.log('Recording started');
     
   } catch (error) {
     console.error('Error starting recording:', error);
-    showNotification('Microphone access denied', 'error');
+    let errorMessage = 'Microphone access denied or not available.';
+    if (error.name === 'NotAllowedError') {
+      errorMessage = 'Microphone permission was denied. Please allow it in site settings.';
+    } else if (error.name === 'NotFoundError') {
+      errorMessage = 'No microphone found on your device.';
+    } else if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+      errorMessage = 'Microphone access is only allowed on HTTPS websites or localhost.';
+    }
+    showNotification(errorMessage, 'error');
+    showOverlay('error', errorMessage);
   }
 }
 

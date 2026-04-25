@@ -39,6 +39,22 @@ document.addEventListener('DOMContentLoaded', () => {
       }, 2000);
     });
   });
+
+  // Handle test recording button
+  const testBtn = document.getElementById('test-recording-btn');
+  testBtn.addEventListener('click', () => {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs[0]) {
+        chrome.tabs.sendMessage(tabs[0].id, { action: "toggleRecording" }, (response) => {
+          if (chrome.runtime.lastError) {
+            showStatus('Error: Refresh the page first!', 'error');
+          } else {
+            window.close(); // Close popup so user can see overlay
+          }
+        });
+      }
+    });
+  });
   
   function showStatus(message, type) {
     statusMessage.textContent = message;
